@@ -30,7 +30,7 @@ loadstring(game:HttpGet(("https://raw.githubusercontent.com/daucobonhi/Ui-Redz-V
       })
       
 ------ Tab
-     local Tab1o = MakeTab({Name = "Script Farm BloxFruit"})
+     local Tab1o = MakeTab({Name = "Script Farm"})
      local Tab2o = MakeTab({Name = "Script Brookhaven"})
      
 ------- BUTTON
@@ -53,3 +53,4 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/realredz/BloxFruits/r
 	  loadstring(game:HttpGet("https://raw.githubusercontent.com/Cyborg883/KyotoTechRework/refs/heads/main/Protected_9378660372508532.lua"))()
 	  end
 	  })
+	  
