@@ -1,0 +1,329 @@
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LP = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local KillAura = false
+local AutoHitAll = false
+local HitboxExpander = false
+local PlayerESP = false
+local AutoBasic = false
+local AutoDivine = false
+local AutoFly = false
+local InfJump = false
+local NoClip = false
+
+local HitboxSize = 12
+local KillAuraRange = 25
+local HitDelay = 0.08
+
+local ESP = {}
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "MNHAT_HUB"
+gui.ResetOnSpawn = false
+
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 480, 0, 380)
+main.Position = UDim2.new(0.5, -240, 0.5, -190)
+main.BackgroundColor3 = Color3.fromRGB(15,15,18)
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,16)
+
+local titleBar = Instance.new("Frame", main)
+titleBar.Size = UDim2.new(1,0,0,55)
+titleBar.BackgroundColor3 = Color3.fromRGB(0,255,180)
+Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0,16)
+
+local title = Instance.new("TextLabel", titleBar)
+title.Size = UDim2.new(1,-100,1,0)
+title.BackgroundTransparency = 1
+title.Text = "MNHAT HUB"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.TextColor3 = Color3.new(0,0,0)
+
+local closeBtn = Instance.new("TextButton", titleBar)
+closeBtn.Size = UDim2.new(0,40,0,40)
+closeBtn.Position = UDim2.new(1,-45,0,7)
+closeBtn.Text = "✕"
+closeBtn.BackgroundTransparency = 1
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.TextSize = 24
+
+local tabNames = {"Combat", "Hitbox", "Movement", "Misc"}
+local tabs = {}
+local pages = {}
+
+for i, name in ipairs(tabNames) do
+    local btn = Instance.new("TextButton", main)
+    btn.Size = UDim2.new(0,105,0,36)
+    btn.Position = UDim2.new(0, 25 + (i-1)*115, 0, 65)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(30,30,35)
+    btn.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8)
+    tabs[name] = btn
+
+    local page = Instance.new("ScrollingFrame", main)
+    page.Size = UDim2.new(1,-40,1,-140)
+    page.Position = UDim2.new(0,20,0,115)
+    page.BackgroundTransparency = 1
+    page.ScrollBarThickness = 6
+    page.Visible = (i==1)
+    pages[name] = page
+end
+
+local function CreateToggle(txt, parent, y, callback)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(1,-20,0,52)
+    f.Position = UDim2.new(0,10,0,y)
+    f.BackgroundTransparency = 1
+
+    local l = Instance.new("TextLabel", f)
+    l.Size = UDim2.new(0.65,0,1,0)
+    l.BackgroundTransparency = 1
+    l.Text = txt
+    l.TextColor3 = Color3.new(1,1,1)
+    l.Font = Enum.Font.Gotham
+    l.TextSize = 15
+    l.TextXAlignment = Enum.TextXAlignment.Left
+
+    local t = Instance.new("TextButton", f)
+    t.Size = UDim2.new(0,68,0,32)
+    t.Position = UDim2.new(1,-80,0.5,-16)
+    t.BackgroundColor3 = Color3.fromRGB(60,60,65)
+    t.Text = "OFF"
+    Instance.new("UICorner", t).CornerRadius = UDim.new(0,16)
+
+    local s = false
+    t.MouseButton1Click:Connect(function()
+        s = not s
+        t.Text = s and "ON" or "OFF"
+        t.BackgroundColor3 = s and Color3.fromRGB(0,255,160) or Color3.fromRGB(60,60,65)
+        callback(s)
+    end)
+end
+
+local function CreateSlider(txt, parent, y, minv, maxv, def, callback)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(1,-20,0,65)
+    f.Position = UDim2.new(0,10,0,y)
+    f.BackgroundTransparency = 1
+
+    local l = Instance.new("TextLabel", f)
+    l.Size = UDim2.new(1,0,0,22)
+    l.BackgroundTransparency = 1
+    l.Text = txt .. ": " .. def
+    l.TextColor3 = Color3.new(1,1,1)
+    l.Font = Enum.Font.Gotham
+
+    local bar = Instance.new("Frame", f)
+    bar.Size = UDim2.new(1,0,0,9)
+    bar.Position = UDim2.new(0,0,0,38)
+    bar.BackgroundColor3 = Color3.fromRGB(45,45,50)
+    Instance.new("UICorner", bar)
+
+    local fill = Instance.new("Frame", bar)
+    fill.Size = UDim2.new((def-minv)/(maxv-minv),0,1,0)
+    fill.BackgroundColor3 = Color3.fromRGB(0,255,180)
+    Instance.new("UICorner", fill)
+
+    local dragging = false
+    bar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local x = UserInputService:GetMouseLocation().X
+            local r = math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+            local val = math.floor(minv + (maxv - minv) * r)
+            fill.Size = UDim2.new(r,0,1,0)
+            l.Text = txt .. ": " .. val
+            callback(val)
+        end
+    end)
+end
+
+-- Toggles
+CreateToggle("Kill Aura", pages["Combat"], 0, function(v) KillAura = v end)
+CreateToggle("Auto Hit All", pages["Combat"], 60, function(v) AutoHitAll = v end)
+CreateToggle("Player ESP", pages["Combat"], 120, function(v) PlayerESP = v end)
+
+CreateToggle("Hitbox Expander", pages["Hitbox"], 0, function(v) HitboxExpander = v end)
+CreateSlider("Hitbox Size", pages["Hitbox"], 70, 5, 35, 12, function(v) HitboxSize = v end)
+CreateSlider("Kill Aura Range", pages["Combat"], 190, 10, 60, 25, function(v) KillAuraRange = v end)
+CreateSlider("Hit Delay", pages["Combat"], 270, 0, 300, 80, function(v) HitDelay = v/1000 end)
+
+CreateToggle("Fly", pages["Movement"], 0, function(v) AutoFly = v end)
+CreateToggle("Infinite Jump", pages["Movement"], 60, function(v) InfJump = v end)
+CreateToggle("NoClip", pages["Movement"], 120, function(v) NoClip = v end)
+CreateSlider("WalkSpeed", pages["Movement"], 190, 16, 300, 16, function(v)
+    if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+        LP.Character.Humanoid.WalkSpeed = v
+    end
+end)
+
+CreateToggle("Auto Basic Chest", pages["Misc"], 0, function(v) AutoBasic = v end)
+CreateToggle("Auto Divine Chest", pages["Misc"], 60, function(v) AutoDivine = v end)
+
+local hop = Instance.new("TextButton", pages["Misc"])
+hop.Size = UDim2.new(1,-20,0,45)
+hop.Position = UDim2.new(0,10,0,140)
+hop.BackgroundColor3 = Color3.fromRGB(0,120,255)
+hop.Text = "Server Hop"
+hop.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", hop).CornerRadius = UDim.new(0,10)
+hop.MouseButton1Click:Connect(function()
+    game:GetService("TeleportService"):Teleport(game.PlaceId)
+end)
+
+closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+
+for name, btn in pairs(tabs) do
+    btn.MouseButton1Click:Connect(function()
+        for _,p in pairs(pages) do p.Visible = false end
+        pages[name].Visible = true
+        for _,b in pairs(tabs) do b.BackgroundColor3 = Color3.fromRGB(30,30,35) end
+        btn.BackgroundColor3 = Color3.fromRGB(0,255,180)
+    end)
+end
+
+-- ESP
+local function NewESP(plr)
+    if plr == LP then return end
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Filled = false
+    local name = Drawing.new("Text")
+    name.Size = 14
+    name.Center = true
+    name.Outline = true
+    ESP[plr] = {box=box, name=name}
+end
+
+for _,p in ipairs(Players:GetPlayers()) do NewESP(p) end
+Players.PlayerAdded:Connect(NewESP)
+
+-- Main Loop
+RunService.Heartbeat:Connect(function()
+    if not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart") then return end
+    local myHRP = LP.Character.HumanoidRootPart
+
+    -- Kill Aura
+    if KillAura then
+        for _,plr in ipairs(Players:GetPlayers()) do
+            if plr \~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local tHRP = plr.Character.HumanoidRootPart
+                if (tHRP.Position - myHRP.Position).Magnitude <= KillAuraRange then
+                    local dir = (tHRP.Position - myHRP.Position).Unit
+                    pcall(function()
+                        RS.Events.GameRemoteFunction:InvokeServer("AttemptWeaponHit", {
+                            hitboxOffset = Vector3.new(0,0,-2),
+                            knockback = 70,
+                            shouldLock = true,
+                            shouldSlow = true,
+                            attackCooldown = 0,
+                            hitboxSize = Vector3.new(HitboxSize*1.3, HitboxSize*1.6, HitboxSize*1.3),
+                            damage = 9999,
+                            tool = LP.Character:FindFirstChildOfClass("Tool"),
+                            shouldLunge = true
+                        }, {{
+                            knockback = 70,
+                            isClosestEnemy = true,
+                            origin = myHRP.Position,
+                            enemyModel = plr.Character,
+                            distance = (tHRP.Position - myHRP.Position).Magnitude,
+                            direction = dir
+                        }})
+                    end)
+                    task.wait(HitDelay)
+                end
+            end
+        end
+    end
+
+    -- Hitbox Expander
+    if HitboxExpander then
+        local tool = LP.Character:FindFirstChildOfClass("Tool")
+        if tool then
+            for _,part in pairs(tool:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
+                    part.Transparency = 0.6
+                    part.Color = Color3.fromRGB(255,50,150)
+                    part.Material = Enum.Material.Neon
+                end
+            end
+        end
+    end
+
+    -- Auto Chests
+    if AutoBasic then pcall(function() RS.Events.GameRemoteFunction:InvokeServer("AttemptRollGachaChest","Basic") end) end
+    if AutoDivine then pcall(function() RS.Events.GameRemoteFunction:InvokeServer("AttemptRollGachaChest","Divine") end) end
+
+    -- ESP
+    for plr,data in pairs(ESP) do
+        local char = plr.Character
+        if PlayerESP and char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local head = char:FindFirstChild("Head")
+            local hum = char:FindFirstChild("Humanoid")
+            if hrp and head and hum then
+                local top = Camera:WorldToViewportPoint(head.Position + Vector3.new(0,0.8,0))
+                local bot = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0,3,0))
+                if top.Z > 0 and bot.Z > 0 then
+                    local h = math.abs(top.Y - bot.Y)
+                    local w = h / 2.1
+                    data.box.Size = Vector2.new(w, h)
+                    data.box.Position = Vector2.new(top.X - w/2, top.Y)
+                    data.box.Color = Color3.fromRGB(0,255,180)
+                    data.box.Visible = true
+                    data.name.Text = plr.Name .. " ["..math.floor(hum.Health).."]"
+                    data.name.Position = Vector2.new(top.X, top.Y-18)
+                    data.name.Visible = true
+                else
+                    data.box.Visible = false
+                    data.name.Visible = false
+                end
+            end
+        else
+            if data.box then data.box.Visible = false end
+            if data.name then data.name.Visible = false end
+        end
+    end
+end)
+
+-- Fly + Other
+RunService.RenderStepped:Connect(function()
+    if AutoFly and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LP.Character.HumanoidRootPart
+        local cam = workspace.CurrentCamera
+        local dir = Vector3.new()
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+        if dir.Magnitude > 0 then
+            hrp.Velocity = dir.Unit * 120
+        end
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if InfJump and LP.Character and LP.Character:FindFirstChild("Humanoid") then
+        LP.Character.Humanoid:ChangeState("Jumping")
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    if NoClip and LP.Character then
+        for _,v in pairs(LP.Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
+    end
+end)
+
+print("MNHAT HUB Loaded Successfully!")
